@@ -1,0 +1,4 @@
+
+### Find any string pattern inside any file ###
+
+grep -rnw '/path/to/somewhere/' -e 'pattern'
