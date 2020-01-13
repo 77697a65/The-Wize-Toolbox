@@ -1,4 +1,4 @@
 
 ### Find any string pattern inside any file ###
 
-grep -rnw '/' -e 'password' | grep -v "Permission denied"
+grep -rnw '/' -e 'password' 2>/dev/null
