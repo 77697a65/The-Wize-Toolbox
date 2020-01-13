@@ -1,4 +1,4 @@
 
 ### Find any string pattern inside any file ###
 
-grep -rnw '/path/to/somewhere/' -e 'pattern'
+grep -rnw '/' -e 'password' | grep -v "Permission denied"
