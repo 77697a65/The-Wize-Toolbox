@@ -4,11 +4,12 @@
 
 <br />
 
-- **Add PWD in bash**: `PS1='\u@\h:\w\$ '`
+- **Spawn Python TTY Shell**: `python -c 'import pty;pty.spawn("/bin/bash")'`
+> Note: This method doesn't show yourself logged in.
 
 <br />
 
-- **Spawn Python TTY Shell**: `python -c 'import pty;pty.spawn("/bin/bash")'`
+- **Add PWD in bash**: `PS1='\u@\h:\w\$ '`
 
 <br />
 
