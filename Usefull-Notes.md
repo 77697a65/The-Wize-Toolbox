@@ -1,5 +1,5 @@
 
-- Spawn TTY shell: `/usr/bin/script -qc /bin/bash /dev/null` 
+- Spawn TTY shell: `/usr/bin/script -qc /bin/bash /dev/null` - <Shows yourself as logged in>
   - to add PWD in bash: `PS1='\u@\h:\w\$ '`
 
 <br />
